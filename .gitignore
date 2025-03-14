@@ -146,6 +146,8 @@ cython_debug/
 
 csv_results/HPP_results/*
 csv_results/processed_results/*
+!csv_results/HPP_results/.gitkeep
+!csv_results/processed_results/.gitkeep
 
 # PyCharm
 #  JetBrains specific template is maintainted in a separate JetBrains.gitignore that can
