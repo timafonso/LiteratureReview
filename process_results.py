@@ -1,13 +1,13 @@
 import pandas as pd
 import os
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Set
 import re
 from datetime import datetime
-from collections import defaultdict
 
 def load_csv_file(file_path: str) -> pd.DataFrame:
     """
     Load a CSV file from Harzing's Publish or Perish into a pandas DataFrame.
+    Handles both standard format and IEEE format.
     
     Args:
         file_path (str): Path to the CSV file
@@ -16,10 +16,14 @@ def load_csv_file(file_path: str) -> pd.DataFrame:
         pd.DataFrame: DataFrame containing the publication data
     """
     try:
-        df = pd.read_csv(file_path)
-        # Convert Year to numeric, coercing errors to NaN
-        df['Year'] = pd.to_numeric(df['Year'], errors='coerce')
-        df.attrs['filename'] = file_path.split('/')[-1]
+        # Check if it's an IEEE file by looking at the filename
+        if 'IEEE_' in os.path.basename(file_path):
+            df = convert_ieee_to_standard_format(file_path)
+        else:
+            df = pd.read_csv(file_path)
+            # Convert Year to numeric, coercing errors to NaN
+            df['Year'] = pd.to_numeric(df['Year'], errors='coerce')
+            df.attrs['filename'] = file_path.split('/')[-1]
         return df
     except Exception as e:
         print(f"Error loading file {file_path}: {str(e)}")
@@ -146,6 +150,17 @@ def analyze_results_from_df(df: pd.DataFrame) -> Dict[str, Dict]:
     }
     return stats
 
+def order_papers_by_citations(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Order papers by citations in descending order.
+    """
+    return df.sort_values(by='Cites', ascending=False)
+
+def order_papers_by_year(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Order papers by year in ascending order.
+    """
+    return df.sort_values(by='Year', ascending=False)
 
 def get_citation_trends(df: pd.DataFrame) -> pd.Series:
     """
@@ -158,6 +173,12 @@ def get_citation_trends(df: pd.DataFrame) -> pd.Series:
         pd.Series: Citations per year
     """
     return df.groupby('Year')['Cites'].sum()
+
+def get_papers_per_year(df: pd.DataFrame) -> pd.Series:
+    """
+    Get the number of papers per year.
+    """
+    return df.groupby('Year').size()
 
 def find_common_papers(dfs: List[pd.DataFrame], threshold: float = 0.8) -> pd.DataFrame:
     """
@@ -198,20 +219,3 @@ def find_common_papers(dfs: List[pd.DataFrame], threshold: float = 0.8) -> pd.Da
                             break
                             
     return pd.DataFrame(common_papers).drop_duplicates()
-
-if __name__ == "__main__":
-    # Example usage
-    results = analyze_results()
-    
-    for filename, stats in results.items():
-        print(f"\nAnalysis for {filename}:")
-        print(f"Search engine: {stats['search_info']['search_engine']}")
-        print(f"Search terms: {stats['search_info']['terms']}")
-        print(f"Excluded terms: {stats['search_info']['excluded']}")
-        print(f"Total papers: {stats['total_papers']}")
-        print(f"Years range: {stats['years_range']}")
-        print(f"Total citations: {stats['total_citations']}")
-        print(f"Average citations: {stats['avg_citations']:.2f}")
-        print("\nTop 5 cited papers:")
-        for paper in stats['top_cited']:
-            print(f"- {paper['Title']} ({paper['Year']}) - {paper['Cites']} citations") 
